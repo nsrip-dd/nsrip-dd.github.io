@@ -14,11 +14,10 @@ The bug was specific to 64-bit ARM:
 asynchronous preemption at a specific instruction,
 in certain functions,
 led to a kind of use-after-free bug which caused the runtime execution tracer to crash when collecting a traceback.
-The Go runtime is low-level, and can be intimidating and mysterious.
-But digging into a tricky bug is, in my experience,
-the best way to learn how a complex system really works.
 I wrote this post to remind myself how I diagnosed the bug,
 and to share some of the things I learned while doing so.
+This was a fun bug to diagnose.
+Digging in to tricky low-level bugs is one of my favorite parts of my work at Datadog.
 </p>
 
 </p>
@@ -55,25 +54,15 @@ goroutine 549321 [running]:
 </pre>
 
 <p>
-I was pinged to help because my job at Datadog is to maintain our continuous profiling capability for Go.
-My colleague Felix Geisendörfer and I had recently worked on the <a href="https://pkg.go.dev/runtime/trace" target="_blank">Go runtime execution tracer</a>,
-which is where the crash was happening.
-Check out Felix's talk <a href="https://www.youtube.com/watch?v=0f8JnJhC0-0" target="_blank">How To Win Frames And Influence Pointers</a>
-for a lot more on our work on execution tracing.
-We worked closesly with the Go runtime maintainers.
-Datadog strongly supports contributing to open-source projects like Go.
-Datadog uses Go heavily,
-our customers use Go,
-and I personally think the Go project is awesome.
-I also happen to love debugging.
-I'm very happy to be able to do this kind of deep work in service of contributing to such a great project.
+I was pinged to help because I had worked on the <a href="https://pkg.go.dev/runtime/trace" target="_blank">Go runtime execution tracer</a>,
+which is where the crash is happening.
 </p>
 
 <p>
-The crashing function, <code>runtime.fpTracebackPCs</code>,
-was a function Felix and I had recently contributed to the Go runtime.
+The top function, <code>runtime.fpTracebackPCs</code>,
+was a function Felix Geisendorfer and I had recently
+<a href="https://blog.felixge.de/waiting-for-go1-21-execution-tracing-with-less-than-one-percent-overhead/" target="_blank">contributed to the Go runtime</a>.
 Its purpose is to efficiently collect a traceback.
-It does so using a technique called <i>frame pointer unwinding</i>.
 We added it specifically for the runtime execution tracer,
 where traceback collection was the largest source of overhead.
 Frame pointer unwinding involves maintaining a linked list of return instruction addresses (PCs),
@@ -97,7 +86,7 @@ So, my approach here was to figure out:
 
 <p>
 The crash traceback gives a pretty clear signal for which call stack we're unwinding:
-the crash happened during a call to <code>runtime.traceGoPreempt</code>,
+the crash happened during a call to <code>runtime.tracePreempt</code>,
 so we were tracing a "preempt" event.
 And on top of that, we see another goroutine with <code>runtime.asyncPreempt</code> on its call stack.
 So, it seems likely that we failed to unwind that goroutine's call stack.
@@ -508,10 +497,6 @@ of hypotheses gets smaller and smaller and smaller, until you don't have a
 choice.
 </p>
 </blockquote>
-
-<p>
-<i>Thanks to Daniel Schwartz-Narbonne for reviewing this post</i>
-</p>
 
 <hr>
 
