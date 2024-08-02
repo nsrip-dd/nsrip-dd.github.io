@@ -16,5 +16,5 @@ jobs:
         with:
           template-variables: |
             {
-              "GITHUB_HEAD_REF": "${{ github.head.ref }}"
+              "GITHUB_HEAD_REF": "${{ github.head_ref }}"
             }
