@@ -1,28 +1,16 @@
-name: Deploy PR previews
+name: PR previews
 
 permissions:
-  # The action wants to create commits
-  contents: write
   # The action wants to leave a comment on PRs
   pull-requests: write
 
 on:
   pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
-      - closed
-
-concurrency: preview-${{ github.ref }}
+    types: [opened, edited]
 
 jobs:
   deploy-preview:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Deploy preview
-        uses: rossjrw/pr-preview-action@v1
-        with:
-          preview-branch: main
+      - name: Generate preview link
+        uses: exercism/pr-commenter-action@v1.5.1
