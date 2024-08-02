@@ -13,3 +13,8 @@ jobs:
     steps:
       - name: Generate preview link
         uses: exercism/pr-commenter-action@v1.5.1
+        with:
+          template-variables: |
+            {
+              "GITHUB_HEAD_REF": "${{ github.head.ref }}"
+            }
