@@ -5,8 +5,7 @@ permissions:
   pull-requests: write
 
 on:
-  pull_request:
-    types: [opened, edited]
+  - pull_request_target
 
 jobs:
   deploy-preview:
