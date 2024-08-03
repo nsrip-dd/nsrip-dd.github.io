@@ -16,20 +16,28 @@ p {
 pre {
   border: 1px solid #000000;
   border-radius: 6px;
-  background-color: #b8decb; }
+  background-color: #b8decb;
+  /* Copied from stack overflow, helps code blocks lay out better on mobile */
+  white-space: pre-wrap !important;
+}
 
 code {
   border: 1px solid #000000;
   border-radius: 2px;
-  background-color: #b8decb; }
+  background-color: #b8decb;
+}
 
 code {
-  padding: 1px 2px; }
+  padding: 1px 2px;
+}
 
 pre {
   padding: 8px 12px;
-  overflow-x: auto; }
-  pre > code {
-    border: 0;
-    padding-right: 0;
-    padding-left: 0; }
+  overflow-x: auto;
+}
+
+pre > code {
+  border: 0;
+  padding-right: 0;
+  padding-left: 0;
+}
