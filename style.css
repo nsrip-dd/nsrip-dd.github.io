@@ -2,38 +2,26 @@ body {
   font-family: "Verdana";
   background-color: #e1f7f7;
   margin: 0 auto;
-  max-width: 50em;
-  padding-left: 50px;
-  padding-right: 50px;
-  padding-top: 50px;
-  padding-bottom: 50px;
-}
-
-p {
-  text-align: justify;
+  max-width: 740px;
+  padding-left: 30px;
+  padding-right: 30px;
+  padding-top: 30px;
 }
 
 pre {
   border: 1px solid #000000;
   border-radius: 6px;
   background-color: #b8decb;
-  /* Copied from stack overflow, helps code blocks lay out better on mobile */
-  white-space: pre-wrap !important;
+  padding: 8px 12px;
+  /* code/output blocks should scroll rather than wrap, otherwise formatting gets screwed up */
+  overflow-x: auto;
 }
 
 code {
   border: 1px solid #000000;
   border-radius: 2px;
   background-color: #b8decb;
-}
-
-code {
   padding: 1px 2px;
-}
-
-pre {
-  padding: 8px 12px;
-  overflow-x: auto;
 }
 
 pre > code {
