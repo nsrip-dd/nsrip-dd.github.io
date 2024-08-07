@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+<svg width="83.781mm" height="77.718mm" version="1.1" viewBox="0 0 83.781 77.718" xmlns="http://www.w3.org/2000/svg">
+ <defs>
+  <marker id="ArrowWideHeavy" overflow="visible" markerHeight="2" markerWidth="2" orient="auto-start-reverse" preserveAspectRatio="xMidYMid" viewBox="0 0 1 1">
+   <path d="m1 0-3 3h-2l3-3-3-3h2z" fill="context-stroke" fill-rule="evenodd"/>
+  </marker>
+  <marker id="ArrowWideHeavy-9" overflow="visible" markerHeight="2" markerWidth="2" orient="auto-start-reverse" preserveAspectRatio="xMidYMid" viewBox="0 0 1 1">
+   <path d="m1 0-3 3h-2l3-3-3-3h2z" fill="context-stroke" fill-rule="evenodd"/>
+  </marker>
+ </defs>
+ <g transform="translate(-27.935 -33.639)">
+  <g transform="translate(-.12201 16.717)" fill="#b8decb" stroke-linejoin="round" stroke-width=".265">
+   <path transform="translate(.37829)" x="27.832258" y="31.139059" width="35.352703" height="12.936419" ry="3.0431962" d="m30.875 31.139h29.266c1.6859 0 3.0432 1.3573 3.0432 3.0432v6.85c0 1.6859-1.3573 3.0432-3.0432 3.0432h-29.266c-1.6859 0-3.0432-1.3573-3.0432-3.0432v-6.85c0-1.6859 1.3573-3.0432 3.0432-3.0432z" stroke="#000"/>
+   <text x="31.562967" y="36.329052" font-family="'Courier New'" font-size="3.175px" stroke="#000000" xml:space="preserve"><tspan x="31.562967" y="36.329052">Frame pointer</tspan><tspan x="31.562967" y="40.297802">saved by caller</tspan></text>
+  </g>
+  <g transform="translate(.044735 9.951)" fill="none" stroke-linejoin="round" stroke-width=".265">
+   <text x="76.542145" y="81.43364" font-family="'Courier New'" font-size="3.175px" stroke="#000000" xml:space="preserve"><tspan x="76.542145" y="81.43364" font-family="'Courier New'" stroke-width=".265">Stack pointer</tspan></text>
+   <path d="m74.479 80.547h-9.6948" marker-end="url(#ArrowWideHeavy)" stroke="#000"/>
+  </g>
+  <g transform="translate(0 -33.338)">
+   <g transform="translate(0 -6.6887)" fill="none" stroke-linejoin="round">
+    <path d="m74.335 94.499h-9.6948" marker-end="url(#ArrowWideHeavy-9)" stroke="#000" stroke-width=".265"/>
+    <text x="76.296356" y="95.385292" font-family="'Courier New'" font-size="3.175px" stroke="#000000" stroke-width=".265" xml:space="preserve"><tspan x="76.296356" y="95.385292">Frame pointer (X29)</tspan><tspan x="76.296356" y="99.354042"/></text>
+   </g>
+  </g>
+  <g transform="translate(-.28695 16.742)" fill="#b8decb" stroke-linejoin="round" stroke-width=".265">
+   <path transform="translate(.52177 14.061)" x="27.832258" y="31.139059" width="35.352699" height="21.114515" ry="3.0431962" d="m30.875 31.139h29.266c1.6859 0 3.0432 1.3573 3.0432 3.0432v15.028c0 1.6859-1.3573 3.0432-3.0432 3.0432h-29.266c-1.6859 0-3.0432-1.3573-3.0432-3.0432v-15.028c0-1.6859 1.3573-3.0432 3.0432-3.0432z" stroke="#000"/>
+   <text x="32.692429" y="54.752316" font-family="'Courier New'" font-size="3.175px" stroke="#000000" xml:space="preserve"><tspan x="32.692429" y="54.752316">Function stack</tspan><tspan x="32.692429" y="58.721066">variables</tspan></text>
+  </g>
+  <text x="31.102236" y="71.753563" fill="none" font-family="'Courier New'" font-size="3.175px" stroke="#000000" stroke-linejoin="round" stroke-width=".265" xml:space="preserve"><tspan x="31.102236" y="71.753563" stroke-width=".265"/></text>
+  <g transform="translate(.28695 17.053)" stroke-linejoin="round" stroke-width=".265">
+   <path transform="translate(-.052136 36.012)" x="27.832258" y="31.139059" width="35.352703" height="12.936419" ry="3.0431962" d="m30.875 31.139h29.266c1.6859 0 3.0432 1.3573 3.0432 3.0432v6.85c0 1.6859-1.3573 3.0432-3.0432 3.0432h-29.266c-1.6859 0-3.0432-1.3573-3.0432-3.0432v-6.85c0-1.6859 1.3573-3.0432 3.0432-3.0432z" fill="#b8decb" stroke="#000"/>
+   <text x="28.254423" y="72.439041" fill="none" font-family="'Courier New'" font-size="3.175px" stroke="#000000" xml:space="preserve"><tspan x="28.254423" y="72.439041">Saved X30 register</tspan><tspan x="28.254423" y="76.407791">(return address)</tspan></text>
+  </g>
+  <path transform="translate(.23481 67.15)" x="27.832258" y="31.139059" width="35.352703" height="12.936419" ry="3.0431962" d="m30.875 31.139h29.266c1.6859 0 3.0432 1.3573 3.0432 3.0432v6.85c0 1.6859-1.3573 3.0432-3.0432 3.0432h-29.266c-1.6859 0-3.0432-1.3573-3.0432-3.0432v-6.85c0-1.6859 1.3573-3.0432 3.0432-3.0432z" fill="#b8decb" opacity=".47" stroke="#000" stroke-dasharray="0.265, 0.265" stroke-linejoin="round" stroke-width=".265"/>
+  <text x="35.35181" y="103.44621" fill="none" font-family="'Courier New'" font-size="3.175px" opacity=".47" stroke="#000000" stroke-linejoin="round" stroke-width=".265" xml:space="preserve"><tspan x="35.35181" y="103.44621">Saved frame</tspan><tspan x="35.35181" y="107.41496">pointer</tspan></text>
+  <g transform="translate(.30841 -33.38)" stroke-linejoin="round" stroke-width=".265">
+   <path transform="translate(-.052136 36.012)" x="27.832258" y="31.139059" width="35.352703" height="12.936419" ry="3.0431962" d="m30.875 31.139h29.266c1.6859 0 3.0432 1.3573 3.0432 3.0432v6.85c0 1.6859-1.3573 3.0432-3.0432 3.0432h-29.266c-1.6859 0-3.0432-1.3573-3.0432-3.0432v-6.85c0-1.6859 1.3573-3.0432 3.0432-3.0432z" fill="#b8decb" stroke="#000"/>
+   <text x="31.187576" y="72.439041" fill="none" font-family="'Courier New'" font-size="3.175px" stroke="#000000" xml:space="preserve"><tspan x="31.187576" y="72.439041">Return addres</tspan><tspan x="31.187576" y="76.407791">saved by caller</tspan></text>
+  </g>
+ </g>
+</svg>
