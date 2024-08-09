@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+<title>Nick Ripley's blog</title>
+<link>https://www.nsrip.com</link>
+<description>
+Nick Ripley's blog. Programming and other interests.
+</description>
+<language>en-us</language>
+<lastBuildDate>Wed, 7 Aug 2024 13:00:00 EDT</lastBuildDate>
+<docs>https://www.rssboard.org/rss-specification</docs>
+<atom:link href="https://www.nsrip.com/feed.xml" rel="self" type="application/rss+xml"/>
+
+<item>
+<title>
+Debugging a Go runtime crash: the one-instruction window
+</title>
+<link>
+https://www.nsrip.com/posts/oneinstruction.html
+</link>
+<description>
+This post is about how I investigated a frame pointer unwinding crash in the Go runtime.
+The bug was specific to 64-bit ARM:
+asynchronous preemption at a specific instruction,
+in certain functions,
+led to a kind of use-after-free bug which caused the runtime execution tracer to crash when collecting a traceback.
+The Go runtime is low-level, and can be intimidating and mysterious.
+But digging into a tricky bug is, in my experience,
+the best way to learn how a complex system really works.
+I wrote this post to remind myself how I diagnosed the bug,
+and to share some of the things I learned while doing so.
+</description>
+<pubDate>Wed, 7 Aug 2024 13:00:00 EDT</pubDate>
+<guid>
+https://www.nsrip.com/posts/oneinstruction.html
+</guid>
+</item>
+
+</channel>
+</rss>
