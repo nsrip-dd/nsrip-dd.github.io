@@ -66,7 +66,7 @@ and to share some of the things I learned while doing so.
 </p>
 
 <div class="hover">
-<h2 id="investigation">The initial investigation <a href="https://nsrip.com/posts/oneinstruction.html#investigation" class="hide">§</a></h2>
+<h2 id="investigation">The initial investigation <a href="https://nsrip.com/posts/oneinstruction.html#investigation" class="hide">&sect;</a></h2>
 </div>
 
 <p >
@@ -108,7 +108,7 @@ goroutine 549321 [running]:
 
 <p >
 I was pinged to help because my job at Datadog is to maintain our continuous profiling capability for Go.
-My colleague Felix Geisendörfer and I had recently worked on the <a href="https://pkg.go.dev/runtime/trace" target="_blank">Go runtime execution tracer</a>,
+My colleague Felix Geisend&ouml;rfer and I had recently worked on the <a href="https://pkg.go.dev/runtime/trace" target="_blank">Go runtime execution tracer</a>,
 which is where the crash was happening.
 We did this work as part of building Datadog's <a href="https://blog.felixge.de/debug-go-request-latency-with-datadogs-profiling-timeline/" target="_blank">profiling timeline feature for Go</a>,
 a tool for understanding latency and finding bottlenecks.
@@ -264,7 +264,7 @@ and one of the experienced maintainers would have probably quickly found the roo
 </p>
 
 <div class="hover">
-<h2 id="reproducer">Reproducing the crash <a href="https://nsrip.com/posts/oneinstruction.html#reproducer" class="hide">§</a></h2>
+<h2 id="reproducer">Reproducing the crash <a href="https://nsrip.com/posts/oneinstruction.html#reproducer" class="hide">&sect;</a></h2>
 </div>
 
 <p >
@@ -393,11 +393,11 @@ $2 = 0x400009fd18
 (gdb) x/g 0x400009fd18
 0x400009fd18:   0x000000400009fd38
 (gdb) x/a 0x400009fd18+8
-0x400009fd20:   0x7a2dc <runtime.asyncPreempt+156>
+0x400009fd20:   0x7a2dc &lt;runtime.asyncPreempt+156&gt;
 (gdb) x/g 0x000000400009fd38
 0x400009fd38:   0x400009ff18
 (gdb) x/a 0x000000400009fd38+8
-0x400009fd40:   0x10085c <fpcrash.MakeBigStruct+44>
+0x400009fd40:   0x10085c &lt;fpcrash.MakeBigStruct+44&gt;
 (gdb) x/g 0x400009ff18
 0x400009ff18:   0x0
 </pre>
@@ -427,19 +427,19 @@ so I wrote a bit of code to do the unwinding:
 </p>
 
 <pre >(gdb) py
->def fpunwind():
->    _ptrptr = gdb.lookup_type('void').pointer().pointer()
->    fp = gdb.selected_frame().read_register('x29')
->    while fp != 0:
->        fp = fp.reinterpret_cast(_ptrptr)
->        pc = (fp+1).dereference()
->        fp = fp.dereference()
->        print(fp, pc)
+&gt;def fpunwind():
+&gt;    _ptrptr = gdb.lookup_type('void').pointer().pointer()
+&gt;    fp = gdb.selected_frame().read_register('x29')
+&gt;    while fp != 0:
+&gt;        fp = fp.reinterpret_cast(_ptrptr)
+&gt;        pc = (fp+1).dereference()
+&gt;        fp = fp.dereference()
+&gt;        print(fp, pc)
 (gdb) py fpunwind() <i ># while at a breakpoint where I think the frame pointers are good</i>
-0x40000a7f38 0x10088c <fpcrash.TestCrash+28>
-0x40000a7f58 0xc9f38 <testing.tRunner+232>
-0x40000a7fa8 0xcad4c <testing.(*T).Run.func1+44>
-0x0 0x79744 <runtime.goexit+4>
+0x40000a7f38 0x10088c &lt;fpcrash.TestCrash+28&gt;
+0x40000a7f58 0xc9f38 &lt;testing.tRunner+232&gt;
+0x40000a7fa8 0xcad4c &lt;testing.(*T).Run.func1+44&gt;
+0x0 0x79744 &lt;runtime.goexit+4&gt;
 </pre>
 
 <p >
@@ -475,13 +475,13 @@ With that, I was able to recreate the crash!
 Continuing with signal SIGURG.
 
 Thread 1 "fpcrash.test" received signal SIGSEGV, Segmentation fault.
-runtime.traceStackID (mp=<optimized out>, pcBuf=..., skip=<optimized out>, ~r0=<optimized out>) at /home/ec2-user/sdk/go1.21.0/src/runtime/trace.go:987
+runtime.traceStackID (mp=&lt;optimized out&gt;, pcBuf=..., skip=&lt;optimized out&gt;, ~r0=&lt;optimized out&gt;) at /home/ec2-user/sdk/go1.21.0/src/runtime/trace.go:987
 987                             nstk += 1 + fpTracebackPCs(unsafe.Pointer(curgp.sched.bp), pcBuf[2:])
 (gdb) disas <i >to show where we're faulting</i>
 <i >[ ... ]</i>
-0x0000000000069370 <+544>:   b       0x69350 <runtime.traceStackID+512>
-=> 0x0000000000069374 <+548>:   ldr     x8, [x4, #8]
-0x0000000000069378 <+552>:   str     x8, [x6, x0, lsl #3]
+0x0000000000069370 &lt;+544&gt;:   b       0x69350 &ltruntime.traceStackID;+512&gt;
+=&gt; 0x0000000000069374 &lt;+548&gt;:   ldr     x8, [x4, #8]
+0x0000000000069378 &lt;+552&gt;:   str     x8, [x6, x0, lsl #3]
 <i >[ ... ]</i>
 (gdb) p/x $x4
 $9 = 0xdeadbeef
@@ -518,9 +518,9 @@ runtime.asyncPreempt () at /home/ec2-user/sdk/go1.21.0/src/runtime/preempt_arm64
 47              CALL ·asyncPreempt2(SB)
 (gdb) disas
 <i >[ ... ]</i>
-0x000000000007a2d0 <+144>:   stp     d28, d29, [sp, #456]
-0x000000000007a2d4 <+148>:   stp     d30, d31, [sp, #472]
-=> 0x000000000007a2d8 <+152>:   bl      0x7b280 <runtime.asyncPreempt2>
+0x000000000007a2d0 &lt;+144&gt;:   stp     d28, d29, [sp, #456]
+0x000000000007a2d4 &lt;+148&gt;:   stp     d30, d31, [sp, #472]
+=&gt; 0x000000000007a2d8 &lt;+152&gt;:   bl      0x7b280 &lt;runtime.asyncPreempt2&gt;
 </pre>
 
 <p >
@@ -539,7 +539,7 @@ Any junk could go on the stack where the frame pointer register was pointing.
 </p>
 
 <div class="hover">
-<h2 id="fix">The bug report, fix, and conclusions <a href="https://nsrip.com/posts/oneinstruction.html#fix" class="hide">§</a></h2>
+<h2 id="fix">The bug report, fix, and conclusions <a href="https://nsrip.com/posts/oneinstruction.html#fix" class="hide">&sect;</a></h2>
 </div>
 
 <p >
@@ -557,7 +557,7 @@ making sure the frame pointer is restored <i >before</i> the call frame is freed
 With that, the instructions look like this:
 </p>
 
-<pre >000000000010cc10 <fpcrash.MakeBigStruct>:
+<pre >000000000010cc10 &lt;fpcrash.MakeBigStruct&gt;:
         10cc10:       f81e0ffe        str     x30, [sp, #-32]!
         10cc14:       f81f83fd        stur    x29, [sp, #-8]
         10cc18:       d10023fd        sub     x29, sp, #0x8
@@ -633,7 +633,7 @@ choice.
 
 <p >
 <i >
-Thanks to Daniel Schwartz-Narbonne, Matt Alp, and Felix Geisendörfer for reviewing this post.
+Thanks to Daniel Schwartz-Narbonne, Matt Alp, and Felix Geisend&ouml;rfer for reviewing this post.
 Special thanks to Felix for suggesting visualizations for the call stack state.
 </i>
 </p>

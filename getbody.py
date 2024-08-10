@@ -42,8 +42,16 @@ class BodyGetter(HTMLParser):
         if self._want:
             print(data, end="")
 
+    def handle_entityref(self, name):
+        if self._want:
+            print(f"&{name};", end="")
 
-parser = BodyGetter()
+    def handle_charref(self, name):
+        if self._want:
+            print(f"&#{name};", end="")
+
+
+parser = BodyGetter(convert_charrefs=False)
 basename = os.path.basename(sys.argv[1])
 with open(sys.argv[1]) as f:
     parser.feed(f.read())

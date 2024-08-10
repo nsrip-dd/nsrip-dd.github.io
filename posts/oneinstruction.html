@@ -445,9 +445,9 @@ runtime.traceStackID (mp=&lt;optimized out&gt;, pcBuf=..., skip=&lt;optimized ou
 987                             nstk += 1 + fpTracebackPCs(unsafe.Pointer(curgp.sched.bp), pcBuf[2:])
 (gdb) disas <i>to show where we're faulting</i>
 <i>[ ... ]</i>
-0x0000000000069370 &lt+544&gt;:   b       0x69350 &ltruntime.traceStackID+512&gt;
+0x0000000000069370 &lt;+544&gt;:   b       0x69350 &ltruntime.traceStackID+512&gt;
 =&gt; 0x0000000000069374 &lt+548&gt;:   ldr     x8, [x4, #8]
-0x0000000000069378 &lt+552&gt;:   str     x8, [x6, x0, lsl #3]
+0x0000000000069378 &lt;+552&gt;:   str     x8, [x6, x0, lsl #3]
 <i>[ ... ]</i>
 (gdb) p/x $x4
 $9 = 0xdeadbeef
