@@ -54,4 +54,6 @@ class BodyGetter(HTMLParser):
 parser = BodyGetter(convert_charrefs=False)
 basename = os.path.basename(sys.argv[1])
 with open(sys.argv[1]) as f:
+    print("<![CDATA[")
     parser.feed(f.read())
+    print("]]>")
