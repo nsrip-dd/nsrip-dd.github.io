@@ -14,7 +14,7 @@
 <a href="../feed.xml">RSS</a>
 </b></p>
 
-<p><i>Posted 2024-12-24</i></p>
+<p><i>Posted 2024-12-24, updated 2025-01-03</i></p>
 
 <p>
 Recently I diagnosed and fixed two frame pointer unwinding crashes in Go.
@@ -87,7 +87,7 @@ There were many dead ends.
 Thanks to the issue reporter, Liz Fong-Jones (@lizthegrey), for being so willing to collect and share information.
 The key clue turned out to be the address of the faulting memory access, <code>0x30bc5b31</code>,
 which was the same in every occurrence of the crash.
-The program was reading 8 bytes above a frame pointer,
+The program was <a href="https://cs.opensource.google/go/go/+/refs/tags/go1.23.4:src/runtime/mprof.go;l=592;drc=a0d15cb9c8f3c35c96129857984d25446041f29e" target="_blank">reading 8 bytes above a frame pointer</a>,
 so the supposed frame pointer was <code>0x30bc5b29</code>.
 In a moment of desperation (or inspiration?)
 I put this value into GitHub code search and turned up several
@@ -365,6 +365,10 @@ refer to the
 If you're planning to write Go assembly,
 be aware of the details of the Go ABI,
 but also lean on tools like Avo to handle the subtle details for you so you can focus on the code you actually want to write.
+</p>
+
+<p>
+<i>Thanks to Felix Geisendörfer for feedback</i>
 </p>
 
 <hr>
