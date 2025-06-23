@@ -1,0 +1,371 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>How to patch the Go toolchain</title>
+<link rel="stylesheet" href="../style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+
+<h1>How to patch the Go toolchain</h1>
+
+<p><b>
+<a href="../index.html">Home</a>
+-
+<a href="../feed.xml">RSS</a>
+</b></p>
+
+<p><i>Posted 2025-07-02</i></p>
+
+<p>
+Every now and then,
+I've run into a tricky Go bug that seems to involve the compiler, runtime, or standard library.
+Try as I might, I can't reproduce the bug.
+I've only seen it happen in production.
+I don't have enough information to diagnose the issue.
+Sometimes I've wished I could get the runtime to emit some more diagnostics,
+or just wanted to try out a potential fix from another Go contributor.
+This post covers a few ways you can build your Go programs with changes applied to the compiler, runtime, or standard library.
+</p>
+
+<p>
+The short version:
+</p>
+
+<ul>
+<li>
+The most flexible option is to build a toolchain distribution from (modified) source.
+You'll need to do this if you're changing the compiler, linker, or other tools.
+</li>
+<li>
+If you're only modifying the runtime or standard library,
+use <a href="https://github.com/felixge/go-patch-overlay" target="_blank"><code>go-patch-overlay</code></a>
+to apply patches at build time.
+</li>
+</ul>
+
+<div class="hover">
+<h2 id="toolchain">Build a toolchain from source <a href="#toolchain" class="hide">&sect;</a></h2>
+</div>
+
+<p>
+The first method is to build a custom Go toolchain,
+and use it to build your program.
+By toolchain, I mean the collection of tools (<code>go</code> command, compiler, linker, etc),
+along with the runtime and standard library sources.
+There are ways to change the runtime and standard library sources when you build your program.
+But if you want to change the tools,
+you'll need to build them ahead of time.
+</p>
+
+<p>
+You first check out the Go source code:
+</p>
+
+<pre>git clone https://go.googlesource.com/go</pre>
+
+<p>
+If you're making a change to a specific Go release version,
+use <code>git switch --detach {release tag}</code> to check it out.
+Then you make the changes you want.
+</p>
+
+<p>
+If you want to build the toolchain to use locally,
+there's a script to build it:
+</p>
+
+<pre>cd src
+./make.bash
+</pre>
+
+<p>
+Then add <code>/path/to/go/bin</code> to your <code>PATH</code>.
+After that, running the <code>go</code> command will use the toolchain you built.
+</p>
+
+<p>
+What if you want to give this toolchain to someone else,
+or use it in your CI?
+My colleague <a href="https://github.com/gandem" target="_blank">Nayef</a> has done this at Datadog.
+Here's how he's done it:
+</p>
+
+<p>
+You'll need a <code>VERSION</code> file to make a distribution:
+</p>
+
+<pre>echo go1.x.y > VERSION</pre>
+
+<p>
+Replace <code>x</code> and <code>y</code> with numbers.
+For example,
+if you were testing a fix for <code>go1.24.4</code>,
+you could do <code>go1.24.999</code>.
+That'll give you a valid version that's also unlikely to collide with a real Go version.
+</p>
+
+<p>
+Then you'll actually build the distribution:
+</p>
+
+<pre>cd src/
+GOOS=linux GOARCH=amd64 ./make.bash -distpack 
+</pre>
+
+<p>
+Set <code>GOOS</code> and <code>GOARCH</code> as needed.
+You'll end up with a distribution like
+</p>
+
+<pre>
+../pkg/distpack/go1.X.Y.linux-amd64.tar.gz
+</pre>
+
+<p>
+To actually <i>use</i> this,
+you'll essentially follow the steps in the <a href="https://go.dev/doc/install" target="_blank">Go installation docs</a>.
+Copy <code>go1.X.Y.linux-amd64.tar.gz</code> to wherever you want to install it,
+and then extract it.
+You'll need to update the <code>PATH</code> environment variable
+to include the <code>bin</code> subdirectory of the resulting directory.
+Then when you run the <code>go</code> command you'll be using the custom toolchain.
+
+</p>
+
+<div class="hover">
+<h2 id="gotip">Use the <code>gotip</code> tool <a href="#gotip" class="hide">&sect;</a></h2>
+</div>
+
+<p>
+If you have a CL you'd like to use (from <a href="https://go.dev/cl" target="_blank">go.dev/cl</a>),
+there's a tool that can build the toolchain for you.
+It's called <a href="https://pkg.go.dev/golang.org/dl/gotip" target="_blank"><code>gotip</code></a>.
+This might apply to you if you've reported a bug,
+and a Go maintainer has a potential fix for you to try.
+The <code>gotip</code> readme explains it,
+but here's a concrete example:
+</p>
+
+<p>
+Say you want to try out <a href="https://go.dev/cl/12345" target="_blank">go.dev/cl/12345</a>.
+The "CL number" is 12345.
+You can then use <code>gotip</code> like so:
+</p>
+
+<pre>go install golang.org/dl/gotip@latest
+gotip download 12345
+</pre>
+
+<p>
+This will download the Go sources from that CL number,
+and then build the Go toolchain from those sources.
+Then you can use <code>gotip</code> to build your program in place of the normal <code>go</code> command.
+</p>
+
+<div class="hover">
+<h2 id="bazel">Bazel <a href="#bazel" class="hide">&sect;</a></h2>
+</div>
+
+<p>
+If you build your Go code with Bazel,
+then ignore the rest of this post and just refer to this section.
+Full disclosure:
+At the time of writing this post,
+I haven't actually used this method.
+I don't know if this works for compiler/linker/etc patches or just runtime/library code.
+But we have some Bazel stuff at Datadog so it seemed worth mentioning here.
+The <code>rules_go</code> rules support patching the tools and libraries out of the box.
+It's described <a href="https://github.com/bazel-contrib/rules_go/blob/master/go/toolchains.rst#go_download_sdk" target="_blank">here</a>.
+Here's an example straight from the manual:
+</p>
+
+<pre>
+go_download_sdk(
+    name = "go_sdk",
+    goos = "linux",
+    goarch = "amd64",
+    version = "1.18.1",
+    sdks = {
+        "linux_amd64": ("go1.18.1.linux-amd64.tar.gz", "b3b815f47ababac13810fc6021eb73d65478e0b2db4b09d348eefad9581a2334"),
+        "darwin_amd64": ("go1.18.1.darwin-amd64.tar.gz", "3703e9a0db1000f18c0c7b524f3d378aac71219b4715a6a4c5683eb639f41a4d"),
+    },
+    <b>patch_strip = 1,
+    patches = [
+        "//patches:cgo_issue_fix.patch",
+    ]</b>
+)
+</pre>
+
+<p>
+I've bolded the relevant part.
+You just provide a list of patches,
+and they're applied when Bazel builds and installs the toolchain.
+</p>
+
+<div class="hover">
+<h2 id="patch">Patch the sources from the toolchain <a href="#patch" class="hide">&sect;</a></h2>
+</div>
+
+<p>
+As mentioned previously,
+if you want to change the compiler, linker, or other tools,
+you'll need to rebuild them.
+But if your changes are just to the runtime or standard library,
+you have other options.
+Your Go toolchain includes the runtime and standard library source code.
+The code for your toolchain is under the toolchain's <code>GOROOT</code>:
+</p>
+
+<pre>
+% go env GOROOT
+/usr/local/go
+% go1.24.4 env GOROOT
+/Users/nick/sdk/go1.24.4
+</pre>
+
+<p>
+There are a few ways you can modify the source code.
+The first way is to edit it directly.
+You can use a text editor,
+or if you have a patch, you can apply it to the source code.
+<b>Don't do this to your local toolchain installation!</b>
+It's a pain to undo your changes.
+This method is suitable for doing during a build in a Docker container.
+</p>
+
+<p>
+There are a few ways to get a patch:
+</p>
+
+<ul>
+<li>Somebody gives you one</li>
+<li>You check out the Go sources and edit them. Then run <code>git diff > change.patch</code></li>
+<li>
+You get one from a CL.
+You can visit the CL page, where there should be a link to download the change as a patch.
+Or you can download the patch via the <a href="https://gerrit-documentation.storage.googleapis.com/Documentation/3.12.0/rest-api-changes.html#get-patch" target="_blank">API</a>
+<pre>
+CL_NUMBER=12345
+curl -XGET "https://go-review.googlesource.com/changes/go~${CL_NUMBER}/revisions/current/patch?raw" > ${CL_NUMBER}.patch
+</pre>
+</li>
+</ul>
+
+<p>
+Assuming you have a patch,
+you can apply it to the Go toolchain sources like so:
+</p>
+
+<pre>
+pushd $(go env GOROOT)
+git apply /path/to/patch1.diff /path/to/patch2.diff ...
+popd
+go build ...
+</pre>
+
+<p>
+Whatever changes you make to the sources will be reflected in the program you build.
+Expect your build to be a bit slower if you change widely depended-upon packages,
+like <code>runtime</code>.
+</p>
+
+<div class="hover">
+<h2 id="overlay">Build-time overlay <a href="#overlay" class="hide">&sect;</a></h2>
+</div>
+
+<p>
+Turns out there's another way to change the Go sources at build time,
+without needing to actually modify your installation.
+The <code>go build</code> command accepts an <code>-overlay</code> argument.
+The argument is a path to a JSON file like this:
+</p>
+
+<pre>
+{
+  "Replace": {
+    "/path/to/source1.go": "/other/path/to/replacement.go",
+    "/path/to/source2.go": "",
+    ...
+  }
+}
+</pre>
+
+<p>
+Basically, an <i>overlay</i> is a key-value map where the keys are file paths seen by the compiler,
+and the values are replacement files.
+This can even include new or deleted files.
+The overlay feature was <a href="https://go.dev/cl/253747" target="_blank">originally added</a> to support <code>gopls</code>,
+where the language server needs to tell the compiler about files whose contents haven't been written to disk.
+We can use it to try out patches.
+</p>
+
+<p>
+There's a tool that can generate an overlay for you from patches:
+<a href="https://github.com/felixge/go-patch-overlay" target="_blank"><code>go-patch-overlay</code></a>.
+My colleague Felix wrote this a few years ago.
+I wrote a very similar program during a recent team research week with a few fixes and extra features,
+before I knew about Felix's program,
+so we incorporated my changes into his program.
+You use the tool like this:
+</p>
+
+<pre>
+go install github.com/felixge/go-patch-overlay@main
+go build -overlay=$(go-patch-overlay /path/to/patch.diff)
+</pre>
+
+<p>
+It works like this:
+</p>
+
+<ul>
+<li>
+The <code>go-patch-overlay</code> command reads the patch and determines which files it modifies.
+</li>
+<li>
+Then the tool runs <code>go env GOROOT</code> to find where the toolchain sources are installed.
+It copies any modified files into a new temporary directory.
+</li>
+<li>
+Then the tool applies the patch to the sources it copied from the toolchain <code>GOROOT</code>.
+</li>
+<li>
+Then the tool creates an overlay JSON file mapping the original sources to the modified sources.
+The tool then prints the path to the JSON file to standard out.
+</li>
+</ul>
+
+<p>
+The file replacements in the overlay only apply to that specific <code>go build</code> invocation.
+Your toolchain's sources are unchanged.
+You can also pass the <code>-overlay</code> argument to <code>go run</code> and <code>go test</code>.
+</p>
+
+<p>
+I personally like this method the best for runtime/standard library changes.
+It's lightweight,
+non-destructive,
+and easy to use both locally and in CI.
+</p>
+
+<div class="hover">
+<h2 id="orchestrion">Orchestrion <a href="#orchestrion" class="hide">&sect;</a></h2>
+</div>
+
+<p>
+There's one more tool worth mentioning here:
+<a href="https://github.com/datadog/orchestrion" target="_blank">Orchestrion</a>.
+Orchestrion automatically instruments Go code.
+It was originally built for distributed tracing, profiling, and security monitoring instrumentation.
+It works by rewriting source code at build time.
+It's a really powerful tool,
+kind of a low orbit ion cannon compared to the hammer of applying a patch.
+I won't go into the details here.
+If the changes you want to make are simple,
+I'd start with patches and <code>go-patch-overlay</code>.
+But keep Orchestrion in mind if you need something more powerful.
+</p>
+
+</body>
+</html>
