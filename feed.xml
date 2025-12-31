@@ -23,7 +23,7 @@ The goroutine holds on to memory and the garbage collector can't clean it up.
 This post covers two examples from the Go standard library for doing work in goroutines such that the goroutines don't leak.
 The examples embody Dave Cheney's advice:
 "never start a goroutine without knowing how it will stop."
-      <description/>
+      </description>
       <pubDate>Wed, 31 Dec 2025 14:56:10 EST</pubDate>
       <guid>https://www.nsrip.com/posts/goroutineleak.html</guid>
       <content:encoded><![CDATA[
