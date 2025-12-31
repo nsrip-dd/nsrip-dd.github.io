@@ -1,0 +1,361 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>Two concurrency patterns which avoid goroutine leaks</title>
+<link rel="stylesheet" href="../style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+
+<h1>Two concurrency patterns which avoid goroutine leaks</h1>
+
+<p><b>
+<a href="../index.html">Home</a>
+-
+<a href="../feed.xml">RSS</a>
+</b></p>
+
+<p><i>Posted 2025-12-31</i></p>
+
+<p>
+Go has automatic memory management,
+but it's still possible to leak memory.
+Probably the most common kind of leak I've seen is leaking goroutines.
+You start a goroutine to do some work,
+but forget to arrange for the goroutine to stop.
+The goroutine holds on to memory and the garbage collector can't clean it up.
+This post covers two examples from the Go standard library for doing work in goroutines such that the goroutines don't leak.
+The examples embody Dave Cheney's <a href="https://dave.cheney.net/2016/12/22/never-start-a-goroutine-without-knowing-how-it-will-stop" target="_blank">advice</a>:
+"never start a goroutine without knowing how it will stop."
+</p>
+
+<p>
+The code I show here is from the Go repository and is copyrighted by the Go authors.
+</p>
+
+<div class="hover">
+<h2 id="timerloop">Using <code>time.AfterFunc</code> instead of a ticker in a loop <a href="#timerloop" class="hide">&sect;</a></h2>
+</div>
+
+<p>
+Sometimes your program needs to do something periodically,
+like flush a buffer,
+send pending log messages or accumulated metrics somewhere,
+etc.
+The simplest way to accomplish that is to start a goroutine.
+That goroutine has a <code>time.Ticker</code>,
+a second channel to signal that the goroutine should stop,
+and selects on the two in a loop.
+But if you don't stop that goroutine,
+it'll hold on to the buffer or other memory indefinitely.
+The idea in this section is this:
+schedule a <i>single</i> flush, and only when new data is added.
+</p>
+
+<p>
+I first saw this pattern in the <code>net/http/reverseproxy</code> package.
+The reverse proxy buffers writes for efficiency.
+To avoid potentially unbounded latency if the buffer doesn't fill up,
+the reverse proxy periodically flushes the buffer.
+The implementation used to look like this:
+</p>
+
+<pre>
+type maxLatencyWriter struct {
+	dst     writeFlusher
+	latency time.Duration
+
+	mu   sync.Mutex // protects Write + Flush
+	done chan bool
+}
+
+func (m *maxLatencyWriter) Write(p []byte) (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.dst.Write(p)
+}
+
+func (m *maxLatencyWriter) flushLoop() {
+	t := time.NewTicker(m.latency)
+	defer t.Stop()
+	for {
+		select {
+		case <-m.done:
+			if onExitFlushLoop != nil {
+				onExitFlushLoop()
+			}
+			return
+		case <-t.C:
+			m.mu.Lock()
+			m.dst.Flush()
+			m.mu.Unlock()
+		}
+	}
+}
+
+func (m *maxLatencyWriter) stop() { m.done <- true }
+</pre>
+
+<p>
+One big flaw here is that if you forget to <code>defer m.stop()</code>,
+then the goroutine running <code>m.flushLoop</code> will never exit.
+That goroutine is going to hold on to the backing buffer for the writer.
+If such a goroutine is started for every HTTP request the proxy receives,
+the program will eventually run out of memory.
+</p>
+
+<p>
+<a href="https://go-review.googlesource.com/c/go/+/137335" target="_blank">CL 137335</a> from Brad Fitzpatrick changed the implementation.
+There were a few motivations for that change,
+but one benefit of the new implementation is getting rid of that goroutine.
+Here's the <a href="https://cs.opensource.google/go/go/+/refs/tags/go1.25.2:src/net/http/httputil/reverseproxy.go;l=694-741" target="_blank">new implementation</a>:
+</p>
+
+<pre>
+type maxLatencyWriter struct {
+	dst     io.Writer
+	flush   func() error
+	latency time.Duration // non-zero; negative means to flush immediately
+
+	mu           sync.Mutex // protects t, flushPending, and dst.Flush
+	t            *time.Timer
+	flushPending bool
+}
+
+func (m *maxLatencyWriter) Write(p []byte) (n int, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	n, err = m.dst.Write(p)
+	if m.latency < 0 {
+		m.flush()
+		return
+	}
+	if m.flushPending {
+		return
+	}
+	if m.t == nil {
+		m.t = time.AfterFunc(m.latency, m.delayedFlush)
+	} else {
+		m.t.Reset(m.latency)
+	}
+	m.flushPending = true
+	return
+}
+
+func (m *maxLatencyWriter) delayedFlush() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if !m.flushPending { // if stop was called but AfterFunc already started this goroutine
+		return
+	}
+	m.flush()
+	m.flushPending = false
+}
+
+func (m *maxLatencyWriter) stop() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.flushPending = false
+	if m.t != nil {
+		m.t.Stop()
+	}
+}
+</pre>
+
+<p>
+The writer has a timer.
+When bytes are written, the timer is set to flush later based on the desired max latency.
+The timer is reset if it was already scheduled,
+so the writer will only flush if there are no more write calls for a long enough time.
+If and when the timer fires,
+the buffer is flushed one time and then that's it.
+That flush happens in a new goroutine created when the timer fires,
+but we know it just does one thing and thus we know the goroutine won't leak.<sup><a href="#footnote1" id="back1">[1]</a></sup>
+Nice!
+</p>
+
+<p>
+In the reverse proxy, the code still needs to ensure that <code>stop</code> is called.
+This is because the writer is going to be used later without synchronization,
+and thus the code needs to ensure that the flush scheduled by the timer doesn't touch it.
+However, even if the writer <i>was</i> safe to use concurrently,
+we're still better off because we've avoided the goroutine leak.
+</p>
+
+<div class="hover">
+<h2 id="workerpool">Lazily-created worker pool <a href="#workerpool" class="hide">&sect;</a></h2>
+</div>
+
+<p>
+The second example comes from the Go toolchain.
+The toolchain has lots of cases where it can parallelize work.
+It's not necessarily good to start a goroutine per work item, though.
+For one, if there are lots of them (like one per package) and they each use a decent amount of memory,
+the program can run out of memory.
+And if the work items are compute heavy,
+there's no benefit do doing more than "the number of processors" work items concurrently.
+The typical approach here would be to create a "pool" of workers.
+And in the typical implementation,
+workers are goroutines that receive work items from a channel.
+Usually the goroutines would be started up-front.
+Then the goroutines <code>range</code> over that channel and exit when the channel is closed.
+But if we don't close the channel,
+the workers never stop.
+</p>
+
+<p>
+Now, unlike the reverse proxy example,
+I don't think I've personally seen unbounded goroutine leaks from worker pools.
+They're usually created once, at the start of the program.
+It's not the end of the world if they don't exit because they'll be around for the whole program run anyway.
+But I still think this next example is neat,
+as an example of avoiding leaks by design.
+Maybe you'll find a good use for the pattern.
+</p>
+
+<p>
+<a href="https://go-review.googlesource.com/c/go/+/247766" target="_blank">CL 247766</a> from Bryan Mills introduced a <code>Queue</code> struct for scheduling work with bounded parallelism.
+The code is a little longer so I'll break it up.<sup><a href="#footnote2" id="back2">[2]</a></sup>
+Here are the data structures and how they're created:
+</p>
+
+<pre>
+// Queue manages a set of work items to be executed in parallel. The number of
+// active work items is limited, and excess items are queued sequentially.
+type Queue struct {
+	maxActive int
+	st        chan queueState
+}
+
+type queueState struct {
+	active  int // number of goroutines processing work; always nonzero when len(backlog) > 0
+	backlog []func()
+	idle    chan struct{} // if non-nil, closed when active becomes 0
+}
+
+// NewQueue returns a Queue that executes up to maxActive items in parallel.
+//
+// maxActive must be positive.
+func NewQueue(maxActive int) *Queue {
+	if maxActive < 1 {
+		panic(fmt.Sprintf("par.NewQueue called with nonpositive limit (%d)", maxActive))
+	}
+
+	q := &Queue{
+		maxActive: maxActive,
+		st:        make(chan queueState, 1),
+	}
+	q.st <- queueState{}
+	return q
+}
+</pre>
+
+<p>
+Work is submitted to the queue as parameterless functions to call.
+The functions are stored in a first-in first-out backlog,
+implemented using a slice here.
+Note that this implementation uses a buffered channel (<code>st</code>) as a kind of mutex to protect the queue state.
+Here's how work is submitted to the queue:
+</p>
+
+<pre>
+// Add adds f as a work item in the queue.
+//
+// Add returns immediately, but the queue will be marked as non-idle until after
+// f (and any subsequently-added work) has completed.
+func (q *Queue) Add(f func()) {
+	st := <-q.st
+	if st.active == q.maxActive {
+		st.backlog = append(st.backlog, f)
+		q.st <- st
+		return
+	}
+	if st.active == 0 {
+		// Mark q as non-idle.
+		st.idle = nil
+	}
+	st.active++
+	q.st <- st
+
+	go func() {
+		for {
+			f()
+
+			st := <-q.st
+			if len(st.backlog) == 0 {
+				if st.active--; st.active == 0 && st.idle != nil {
+					close(st.idle)
+				}
+				q.st <- st
+				return
+			}
+			f, st.backlog = st.backlog[0], st.backlog[1:]
+			q.st <- st
+		}
+	}()
+}
+</pre>
+
+<p>
+There's a little more going on here.
+Basically, if there are fewer than <code>maxActive</code> worker goroutines,
+the function starts one.
+Otherwise work items are added to the backlog.
+The worker goroutines remove items from the backlog and run them.
+</p>
+
+<p>
+The exit condition is very different from the "<code>range</code> over a channel" implementation.
+With a channel, the program needs to close the channel for the goroutines to exit.
+This invites user error,
+especially if this is part of an API other people will use.
+With this implementation,
+we don't have that problem.
+The worker goroutines will exit as soon as the backlog is ever empty.
+This should happen eventually if the workers can keep up with the incoming work.
+And if the worker goroutines stop and there's new work later,
+we just start new ones.
+Goroutines are cheap to create.
+Practically speaking,
+I think knowing the code is free of one kind of bug is worth at least some of the cost of making new goroutines every now and then.<sup><a href="#footnote3" id="back3">[3]</a></sup>
+
+</p>
+
+<p>
+The thing these examples have in common is that the exit conditions for the goroutines are clear.
+In the first example, it's that we're only going to flush one time.
+In the second example, it's running out of work.
+There's no other function to remember to call.
+In both examples, we know how the goroutines will stop when we start them.
+</p>
+
+<hr>
+
+<ol>
+<li id="footnote1">
+Unless the write somehow blocks forever...
+I recall having issues with network file systems in the past.
+<a href="#back1">Back</a>
+</li>
+<li id="footnote2">
+I won't show the code here,
+but there's also an <code>Idle</code> method which lets the caller synchronize on all the pending work being finished.
+It basically just returns the <code>idle</code> channel,
+with some logic to handle if there is no active work.
+<a href="#back2">Back</a>
+</li>
+<li id="footnote3">
+If you're going to use this pattern for a long-lived process,
+with unbounded amounts of work,
+don't copy this-as is.
+This implementation uses a slice for the backlog,
+appending new items to the end and slicing the next item off the front.
+This will grow the backing memory without bound.
+Prefer a linked list or other implementation in this case
+(see <a href="https://en.wikipedia.org/wiki/FIFO_(computing_and_electronics)" target="_blank">Wikipedia</a> for an example.)
+<a href="#back3">Back</a>
+</li>
+</ol>
+
+</body>
+</html>
